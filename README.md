@@ -38,6 +38,8 @@ SBAC_PACKAGE='github:your-org/metatavu-sbac#v1.0.0' ./scripts/sbac.sh --folder .
 
 Select an element and use **Upload image** in the properties panel. Images are copied into `<blueprint-folder>/assets/`, then shown as selectable thumbnails for later reuse. The blueprint YAML stores a relative path such as `assets/store-receipt.png`, so photos and their references can be committed with the blueprint.
 
+SVG, PNG, and PDF exports embed selected asset images, so the exported file remains portable outside the local editor.
+
 ## Architecture
 
 - `src/`: React + TypeScript workspace UI.

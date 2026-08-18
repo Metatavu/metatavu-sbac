@@ -65,7 +65,7 @@ export function renderSvg(doc, options = {}) {
 
   const lanes = visibleLanes(doc);
   const stages = visibleStages(doc);
-  const imageFor = (element) => element.image || imageSources[element.id] || '';
+  const imageFor = (element) => imageSources[element.id] || element.image || '';
   const heightOf = (element, lane) =>
     lane.kind === 'evidence' && images && imageFor(element)
       ? LAYOUT.cardHeightWithImage

@@ -3,7 +3,7 @@
  * YAML and JSON (the machine-readable source) and SVG/PNG/PDF (for sharing).
  */
 
-import React, { useMemo, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { renderSvg } from '../../model/renderSvg.js';
 import { exportPdf, exportPng, exportSvg, svgDataUrl } from '../../model/exporters.js';
 import { chip, color, control, font, tab } from '../../theme.js';
@@ -17,9 +17,33 @@ export function ExportDialog({ doc, yaml, json, basename, imageSources, onClose 
   const [scale, setScale] = useState(2);
   const [message, setMessage] = useState('');
   const [copied, setCopied] = useState(false);
+  const [embeddedImages, setEmbeddedImages] = useState({});
+  const [loadingImages, setLoadingImages] = useState(false);
+
+  useEffect(() => {
+    let cancelled = false;
+    const entries = Object.entries(imageSources || {});
+    if (entries.length === 0) {
+      setEmbeddedImages({});
+      return () => { cancelled = true; };
+    }
+
+    setLoadingImages(true);
+    Promise.all(entries.map(async ([id, source]) => [id, await dataUrl(source)]))
+      .then((sources) => {
+        if (!cancelled) setEmbeddedImages(Object.fromEntries(sources));
+      })
+      .catch((cause) => {
+        if (!cancelled) setMessage(cause instanceof Error ? cause.message : 'Unable to prepare images for export.');
+      })
+      .finally(() => {
+        if (!cancelled) setLoadingImages(false);
+      });
+    return () => { cancelled = true; };
+  }, [imageSources]);
 
   const isText = format === 'YAML' || format === 'JSON';
-  const renderOptions = useMemo(() => ({ ...options, imageSources }), [options, imageSources]);
+  const renderOptions = useMemo(() => ({ ...options, imageSources: embeddedImages }), [embeddedImages, options]);
   const rendered = useMemo(
     () => (isText ? null : renderSvg(doc, renderOptions)),
     [doc, isText, renderOptions]
@@ -28,6 +52,10 @@ export function ExportDialog({ doc, yaml, json, basename, imageSources, onClose 
   const text = format === 'YAML' ? yaml : json;
 
   const download = async () => {
+    if (loadingImages) {
+      setMessage('Preparing images for export...');
+      return;
+    }
     try {
       if (format === 'SVG') setMessage(exportSvg(doc, renderOptions, basename));
       else if (format === 'PNG') setMessage(await exportPng(doc, renderOptions, basename, scale));
@@ -184,8 +212,8 @@ export function ExportDialog({ doc, yaml, json, basename, imageSources, onClose 
               >
                 {message}
               </div>
-              <button type="button" onClick={download} style={control.primary}>
-                {format === 'PDF' ? 'Open print view' : `Download ${format}`}
+              <button type="button" onClick={download} disabled={loadingImages} style={{ ...control.primary, opacity: loadingImages ? 0.6 : 1, cursor: loadingImages ? 'wait' : 'pointer' }}>
+                {loadingImages ? 'Preparing images...' : format === 'PDF' ? 'Open print view' : `Download ${format}`}
               </button>
             </div>
           </div>
@@ -193,4 +221,18 @@ export function ExportDialog({ doc, yaml, json, basename, imageSources, onClose 
       )}
     </Dialog>
   );
+}
+
+function dataUrl(source) {
+  return fetch(source)
+    .then((response) => {
+      if (!response.ok) throw new Error(`Unable to load export image (${response.status}).`);
+      return response.blob();
+    })
+    .then((blob) => new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(reader.error || new Error('Unable to embed export image.'));
+      reader.onload = () => resolve(reader.result);
+      reader.readAsDataURL(blob);
+    }));
 }
