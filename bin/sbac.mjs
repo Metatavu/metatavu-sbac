@@ -8,6 +8,7 @@ const root = fileURLToPath(new URL('..', import.meta.url))
 const clientEntry = path.join(root, 'dist', 'index.html')
 
 if (!existsSync(clientEntry)) {
+  console.error('Client bundle is missing. Install from a complete Git checkout or run npm run build first.')
   const build = spawnSync(process.execPath, [path.join(root, 'node_modules', 'vite', 'bin', 'vite.js'), 'build'], {
     cwd: root,
     stdio: 'inherit',
