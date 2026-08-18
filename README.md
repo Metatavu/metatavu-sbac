@@ -21,7 +21,7 @@ No npmjs publication is required. Once this repository is available on GitHub, r
 ./scripts/sbac.sh --folder /path/to/blueprint-repository
 ```
 
-It downloads and runs the package directly from Git using `npx`. To run the launcher without cloning this repository, use its raw GitHub URL:
+It downloads, builds, and runs the package directly from Git using `npx`. To run the launcher without cloning this repository, use its raw GitHub URL:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/metatavu/metatavu-sbac/main/scripts/sbac.sh \
