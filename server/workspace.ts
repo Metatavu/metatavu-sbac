@@ -1,4 +1,4 @@
-import { readdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { parseDocument } from 'yaml'
 
@@ -10,6 +10,7 @@ export type BlueprintSummary = {
 }
 
 const isYaml = (filePath: string) => /\.ya?ml$/i.test(filePath)
+const isImage = (filePath: string) => /\.(avif|gif|jpe?g|png|svg|webp)$/i.test(filePath)
 
 export class Workspace {
   readonly folder: string
@@ -92,5 +93,66 @@ export class Workspace {
       this.assertInside(await realpath(path.dirname(newPath)))
       await writeFile(newPath, text, 'utf8')
     }
+  }
+
+  async listAssets(): Promise<string[]> {
+    const assetsFolder = path.join(this.folder, 'assets')
+    try {
+      await stat(assetsFolder)
+    } catch {
+      return []
+    }
+
+    const files: string[] = []
+    const visit = async (directory: string): Promise<void> => {
+      const entries = await readdir(directory, { withFileTypes: true })
+      await Promise.all(entries.map(async (entry) => {
+        const filePath = path.join(directory, entry.name)
+        if (entry.isDirectory()) return visit(filePath)
+        if (entry.isFile() && isImage(entry.name)) files.push(filePath)
+      }))
+    }
+    await visit(assetsFolder)
+    return files.sort().map((filePath) => path.relative(this.folder, filePath))
+  }
+
+  async readAsset(relativePath: string): Promise<Buffer> {
+    if (!relativePath.startsWith('assets/') || !isImage(relativePath)) {
+      throw new Error('Only image files under assets/ are supported.')
+    }
+    const resolved = await realpath(path.resolve(this.folder, relativePath))
+    this.assertInside(resolved)
+    return readFile(resolved)
+  }
+
+  async saveAsset(name: string, content: Buffer): Promise<string> {
+    const filename = path.basename(name).replace(/[^a-zA-Z0-9._-]/g, '-')
+    if (!filename || filename === '.' || !isImage(filename)) {
+      throw new Error('Upload a supported image file.')
+    }
+    if (content.length === 0 || content.length > 10 * 1024 * 1024) {
+      throw new Error('Image files must be between 1 byte and 10 MB.')
+    }
+
+    const assetsFolder = path.join(this.folder, 'assets')
+    await mkdir(assetsFolder, { recursive: true })
+    this.assertInside(await realpath(assetsFolder))
+
+    const extension = path.extname(filename)
+    const stem = path.basename(filename, extension)
+    let candidate = filename
+    let index = 2
+    while (true) {
+      try {
+        await stat(path.join(assetsFolder, candidate))
+        candidate = `${stem}-${index}${extension}`
+        index += 1
+      } catch {
+        break
+      }
+    }
+
+    await writeFile(path.join(assetsFolder, candidate), content)
+    return path.posix.join('assets', candidate)
   }
 }

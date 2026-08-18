@@ -34,6 +34,10 @@ The default package source is `github:metatavu/metatavu-sbac#main`. Pin a releas
 SBAC_PACKAGE='github:your-org/metatavu-sbac#v1.0.0' ./scripts/sbac.sh --folder ./blueprints
 ```
 
+## Images
+
+Select an element and use **Upload image** in the properties panel. Images are copied into `<blueprint-folder>/assets/`, then shown as selectable thumbnails for later reuse. The blueprint YAML stores a relative path such as `assets/store-receipt.png`, so photos and their references can be committed with the blueprint.
+
 ## Architecture
 
 - `src/`: React + TypeScript workspace UI.

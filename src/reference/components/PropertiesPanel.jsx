@@ -7,7 +7,7 @@
  * same document — there is no separate engineering copy.
  */
 
-import React from 'react';
+import React, { useRef, useState } from 'react';
 import {
   CONNECTION_TYPES,
   DURATION_UNITS,
@@ -19,7 +19,7 @@ import {
 import { chip, color, control, font, radius, size, strokeFor } from '../theme.js';
 import { ChipRow, Field, Mono, SectionLabel, Select, TextInput } from './primitives.jsx';
 
-export function PropertiesPanel({ doc, ui, actions, derived }) {
+export function PropertiesPanel({ doc, ui, actions, derived, assetFiles = [], onUploadAsset, assetUrl }) {
   const { selection } = ui;
 
   return (
@@ -54,6 +54,9 @@ export function PropertiesPanel({ doc, ui, actions, derived }) {
           ui={ui}
           actions={actions}
           derived={derived}
+          assetFiles={assetFiles}
+          onUploadAsset={onUploadAsset}
+          assetUrl={assetUrl}
         />
       )}
     </aside>
@@ -216,7 +219,7 @@ function ConnectionForm({ connection, index, derived, actions }) {
   );
 }
 
-function ElementForm({ element, doc, ui, actions, derived }) {
+function ElementForm({ element, doc, ui, actions, derived, assetFiles, onUploadAsset, assetUrl }) {
   if (!element) return null;
   const lane = derived.lanesById.get(element.lane);
   const patch = (fields) => actions.updateElement(element.id, fields);
@@ -292,35 +295,15 @@ function ElementForm({ element, doc, ui, actions, derived }) {
         />
       </Field>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
-        <button
-          type="button"
-          onClick={() => patch({ image: element.image ? '' : 'assets/' })}
-          style={{
-            ...control.secondary,
-            height: 30,
-            border: `1px solid ${element.image ? color.accent : color.border}`,
-            background: element.image ? color.accent : color.panel,
-            color: element.image ? color.panel : color.body,
-          }}
-        >
-          ▣ Photo
-        </button>
-        <div style={{ fontSize: 10.5, color: color.faint, lineHeight: 1.35 }}>
-          Stored as a path in the blueprint folder, so images version with the YAML.
-        </div>
-      </div>
-
-      {element.image !== undefined && element.image !== '' && (
-        <Field label="Image path">
-          <TextInput
-            mono
-            value={element.image}
-            placeholder="assets/store-receipt.jpg"
-            onChange={(image) => patch({ image })}
-          />
-        </Field>
-      )}
+      <Field label="Evidence image">
+        <ImagePicker
+          assets={assetFiles}
+          value={element.image || ''}
+          onPick={(image) => patch({ image })}
+          onUpload={onUploadAsset}
+          assetUrl={assetUrl}
+        />
+      </Field>
 
       <Field label="Note">
         <textarea
@@ -538,5 +521,50 @@ function ElementForm({ element, doc, ui, actions, derived }) {
   type: ${element.type}`}
       </pre>
     </Panel>
+  );
+}
+
+function ImagePicker({ assets, value, onPick, onUpload, assetUrl }) {
+  const inputRef = useRef(null);
+  const [error, setError] = useState('');
+  const [uploading, setUploading] = useState(false);
+
+  const upload = async (event) => {
+    const file = event.target.files?.[0];
+    event.target.value = '';
+    if (!file || !onUpload) return;
+    setUploading(true);
+    setError('');
+    try {
+      onPick(await onUpload(file));
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'Unable to upload image.');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+        <button type="button" onClick={() => inputRef.current?.click()} disabled={uploading} style={{ ...control.secondary, height: 30, flex: 1 }}>
+          {uploading ? 'Uploading...' : 'Upload image'}
+        </button>
+        {value && <button type="button" onClick={() => onPick('')} style={{ ...control.secondary, height: 30, color: color.danger }}>Remove</button>}
+        <input ref={inputRef} type="file" accept="image/avif,image/gif,image/jpeg,image/png,image/svg+xml,image/webp" onChange={upload} style={{ display: 'none' }} />
+      </div>
+      {assets.length > 0 ? (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, minmax(0, 1fr))', gap: 6, maxHeight: 190, overflowY: 'auto' }}>
+          {assets.map((asset) => {
+            const selected = asset === value;
+            return <button key={asset} type="button" title={asset} onClick={() => onPick(asset)} style={{ overflow: 'hidden', padding: 4, border: `2px solid ${selected ? color.accent : color.border}`, borderRadius: radius.lg, background: selected ? '#F1F8F8' : color.panel, cursor: 'pointer', textAlign: 'left' }}>
+              <img src={assetUrl?.(asset)} alt="" style={{ display: 'block', width: '100%', height: 52, borderRadius: 3, objectFit: 'cover', background: color.wash }} />
+              <span style={{ display: 'block', overflow: 'hidden', marginTop: 4, color: color.body, fontFamily: font.mono, fontSize: 9, textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{asset.replace(/^assets\//, '')}</span>
+            </button>;
+          })}
+        </div>
+      ) : <div style={{ padding: '8px 0', color: color.faint, fontSize: 11 }}>Upload an image to add it to this blueprint&apos;s assets folder.</div>}
+      {error && <div style={{ marginTop: 6, color: color.danger, fontSize: 10.5 }}>{error}</div>}
+    </div>
   );
 }

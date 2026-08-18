@@ -31,4 +31,16 @@ describe('workspace API', () => {
     apps.push(app)
     expect((await app.inject('/api/files/%2E%2E%2Fprivate.yaml')).statusCode).toBe(400)
   })
+
+  it('stores, lists, and serves images under assets', async () => {
+    const folder = await mkdtemp(path.join(tmpdir(), 'sbac-'))
+    const app = await buildServer({ folder })
+    apps.push(app)
+
+    const upload = await app.inject({ method: 'POST', url: '/api/assets', payload: { name: 'store photo.png', base64: Buffer.from('image-data').toString('base64') } })
+    expect(upload.statusCode).toBe(201)
+    expect(upload.json()).toEqual({ path: 'assets/store-photo.png' })
+    expect((await app.inject('/api/assets')).json()).toEqual({ files: ['assets/store-photo.png'] })
+    expect((await app.inject('/api/assets/file?path=assets%2Fstore-photo.png')).body).toBe('image-data')
+  })
 })
