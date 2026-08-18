@@ -1,0 +1,5 @@
+:root { font-family: "IBM Plex Sans", system-ui, sans-serif; color: #16202a; background: #edefec; font-synthesis: none; }
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 320px; }
+button, input, select, textarea { font: inherit; }
+.app-message { display: grid; min-height: 100svh; place-items: center; color: #4a5a66; font-size: 14px; }

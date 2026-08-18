@@ -1,0 +1,38 @@
+{
+  "name": "@metatavu/sbac",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "lint": "oxlint",
+    "preview": "vite preview",
+    "start": "npm run build && tsx server/index.ts",
+    "serve": "tsx server/index.ts",
+    "test": "vitest run",
+    "prepare": "npm run build",
+    "prepack": "npm run build"
+  },
+  "bin": {
+    "sbac": "bin/sbac.mjs"
+  },
+  "dependencies": {
+    "@fastify/static": "^10.1.3",
+    "fastify": "^5.12.0",
+    "react": "^19.2.8",
+    "react-dom": "^19.2.8",
+    "tsx": "^4.23.12",
+    "yaml": "^2.9.0"
+  },
+  "devDependencies": {
+    "@types/node": "^24.13.3",
+    "@types/react": "^19.2.17",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.4",
+    "oxlint": "^1.75.0",
+    "typescript": "~6.0.2",
+    "vite": "^8.2.0",
+    "vitest": "^4.1.10"
+  }
+}

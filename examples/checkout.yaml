@@ -1,0 +1,46 @@
+version: 1
+service:
+  id: online-store
+  name: Online store checkout
+lanes:
+  - id: customer
+    kind: customer
+    label: Customer actions
+  - id: frontstage
+    kind: frontstage
+    label: Frontstage service
+  - id: lane
+    kind: custom
+    label: New lane
+stages:
+  - id: browse
+    name: Browse
+  - id: pay
+    name: Pay
+  - id: confirm
+    name: Confirm
+elements:
+  - id: compare
+    stage: browse
+    lane: customer
+    type: customer-action
+    label: Compare items
+    order: 10
+  - id: add-to-cart
+    stage: browse
+    lane: frontstage
+    type: frontstage-action
+    label: Add item to cart
+    order: 20
+  - id: submit-payment
+    stage: pay
+    lane: customer
+    type: customer-action
+    label: Submit payment
+    order: 30
+  - id: receipt
+    stage: confirm
+    lane: frontstage
+    type: frontstage-action
+    label: Send receipt
+    order: 40
