@@ -18,6 +18,14 @@ export function StageHeader({ stage, index, selected, renaming, actions, canMove
 
   const menu = [
     { label: 'Rename stage', run: () => actions.startRename('stage', stage.id) },
+    {
+      label: stage.titleHidden ? 'Show title' : 'Hide title',
+      run: () => actions.updateStage(stage.id, { titleHidden: !stage.titleHidden }),
+    },
+    {
+      label: stage.durationHidden ? 'Show duration' : 'Hide duration',
+      run: () => actions.updateStage(stage.id, { durationHidden: !stage.durationHidden }),
+    },
     { label: 'Insert stage before', run: () => actions.insertStage(index) },
     { label: 'Insert stage after', run: () => actions.insertStage(index + 1) },
     canMoveLeft && { label: 'Move left', run: () => actions.moveStage(stage.id, -1) },
@@ -47,7 +55,7 @@ export function StageHeader({ stage, index, selected, renaming, actions, canMove
             defaultValue={stage.name}
             onBlur={(event) => {
               const value = event.target.value.trim();
-              if (value) actions.updateStage(stage.id, { name: value });
+              actions.updateStage(stage.id, { name: value });
               actions.endRename();
             }}
             onKeyDown={(event) => {
@@ -66,7 +74,7 @@ export function StageHeader({ stage, index, selected, renaming, actions, canMove
               outline: 'none',
             }}
           />
-        ) : (
+        ) : !stage.titleHidden ? (
           <div
             onClick={(event) => {
               event.stopPropagation();
@@ -82,9 +90,9 @@ export function StageHeader({ stage, index, selected, renaming, actions, canMove
               lineHeight: 1.2,
             }}
           >
-            {stage.name}
+            {stage.name || 'Untitled stage'}
           </div>
-        )}
+        ) : null}
 
         <button
           type="button"
@@ -108,9 +116,11 @@ export function StageHeader({ stage, index, selected, renaming, actions, canMove
         </button>
       </div>
 
-      <div style={{ fontFamily: font.mono, fontSize: 10, color: color.label, marginTop: 3 }}>
-        {duration}
-      </div>
+      {!stage.durationHidden && (
+        <div style={{ fontFamily: font.mono, fontSize: 10, color: color.label, marginTop: 3 }}>
+          {duration}
+        </div>
+      )}
 
       {menuOpen && (
         <div

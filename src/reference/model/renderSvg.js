@@ -34,6 +34,7 @@ function wrap(text, maxChars) {
   let line = '';
   String(text || '')
     .split(/\s+/)
+    .flatMap((word) => word.match(new RegExp(`.{1,${maxChars}}`, 'g')) || [])
     .forEach((word) => {
       if (`${line} ${word}`.trim().length > maxChars && line) {
         lines.push(line);
@@ -65,11 +66,12 @@ export function renderSvg(doc, options = {}) {
 
   const lanes = visibleLanes(doc);
   const stages = visibleStages(doc);
+  const headerHeight = doc.stageHeadersHidden ? 28 : LAYOUT.headerHeight;
   const imageFor = (element) => imageSources[element.id] || element.image || '';
   const heightOf = (element, lane) =>
     lane.kind === 'evidence' && images && imageFor(element)
       ? LAYOUT.cardHeightWithImage
-      : LAYOUT.cardHeight;
+      : Math.max(LAYOUT.cardHeight, 20 + Math.min(wrap(element.label, 26).length, 3) * 13);
 
   const laneHeights = lanes.map((lane) => {
     let tallest = LAYOUT.cardHeight;
@@ -84,7 +86,7 @@ export function renderSvg(doc, options = {}) {
   });
 
   const laneTops = [];
-  let cursorY = LAYOUT.pad + LAYOUT.headerHeight;
+  let cursorY = LAYOUT.pad + headerHeight;
   lanes.forEach((lane, index) => {
     laneTops.push(cursorY);
     cursorY += laneHeights[index] + (lane.dividerAfter ? LAYOUT.dividerHeight : 0);
@@ -103,22 +105,26 @@ export function renderSvg(doc, options = {}) {
     text(LAYOUT.pad, LAYOUT.pad + 18, doc.service.name, 'font-size="17" font-weight="600" fill="#16202A"')
   );
 
-  stages.forEach((stage, column) => {
-    const x = LAYOUT.pad + LAYOUT.labelWidth + column * LAYOUT.cellWidth;
-    parts.push(
-      `<line x1="${x}" y1="${LAYOUT.pad + LAYOUT.headerHeight - 10}" x2="${x}" y2="${height - LAYOUT.pad}" stroke="#E4E8E4" stroke-width="1"/>`
-    );
-    parts.push(
-      text(x + 12, LAYOUT.pad + LAYOUT.headerHeight - 22, stage.name, 'font-size="13" font-weight="600" fill="#16202A"')
-    );
-    if (stage.duration) {
-      const { min, max, unit } = stage.duration;
-      const label = min === max ? `${min} ${unit}` : `${min}-${max} ${unit}`;
+  if (!doc.stageHeadersHidden) {
+    stages.forEach((stage, column) => {
+      const x = LAYOUT.pad + LAYOUT.labelWidth + column * LAYOUT.cellWidth;
       parts.push(
-        `<text x="${x + 12}" y="${LAYOUT.pad + LAYOUT.headerHeight - 8}" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="#8B958D">${escape(label)}</text>`
+        `<line x1="${x}" y1="${LAYOUT.pad + headerHeight - 10}" x2="${x}" y2="${height - LAYOUT.pad}" stroke="#E4E8E4" stroke-width="1"/>`
       );
-    }
-  });
+      if (!stage.titleHidden) {
+        parts.push(
+          text(x + 12, LAYOUT.pad + headerHeight - 22, stage.name || 'Untitled stage', 'font-size="13" font-weight="600" fill="#16202A"')
+        );
+      }
+      if (stage.duration && !stage.durationHidden) {
+        const { min, max, unit } = stage.duration;
+        const label = min === max ? `${min} ${unit}` : `${min}-${max} ${unit}`;
+        parts.push(
+          `<text x="${x + 12}" y="${LAYOUT.pad + headerHeight - 8}" font-family="IBM Plex Mono, monospace" font-size="9.5" fill="#8B958D">${escape(label)}</text>`
+        );
+      }
+    });
+  }
 
   lanes.forEach((lane, row) => {
     const tint = laneTint[lane.kind] || laneTint.custom;
@@ -214,6 +220,7 @@ export function renderSvg(doc, options = {}) {
     }
   });
 
+  const connectionParts = [];
   if (connections) {
     doc.connections.forEach((connection) => {
       const from = boxes.get(connection.from);
@@ -221,7 +228,7 @@ export function renderSvg(doc, options = {}) {
       if (!from || !to) return;
       const stroke = connectionColor[connection.type] || '#8B958D';
       const markerId = `arrow-${stroke.slice(1)}`;
-      parts.push(
+      connectionParts.push(
         `<path d="${routeOrthogonal(from, to)}" fill="none" stroke="${stroke}" stroke-width="1.3" marker-end="url(#${markerId})"${connection.bidirectional ? ` marker-start="url(#${markerId})"` : ''}/>`
       );
     });
@@ -234,9 +241,10 @@ export function renderSvg(doc, options = {}) {
         `<marker id="arrow-${stroke.slice(1)}" viewBox="0 0 8 8" refX="7" refY="4" markerWidth="6" markerHeight="6" orient="auto-start-reverse"><path d="M0,0 L8,4 L0,8 z" fill="${stroke}"/></marker>`
     )
     .join('')}</defs>`;
+  const [background, ...content] = parts;
 
   return {
-    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${defs}${parts.join('')}</svg>`,
+    svg: `<svg xmlns="http://www.w3.org/2000/svg" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${defs}${background}${connectionParts.join('')}${content.join('')}</svg>`,
     width,
     height,
   };

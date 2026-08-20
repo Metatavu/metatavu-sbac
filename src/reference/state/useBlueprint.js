@@ -54,6 +54,8 @@ export function useBlueprint(initialDoc) {
         setUi((prev) => ({ ...prev, dirty: false, selection: null, filter: null, connectFrom: null }));
       },
       markSaved: () => patchUi({ dirty: false }),
+      renameService: (name) => mutate({ type: 'renameService', name }),
+      setStageHeadersHidden: (hidden) => mutate({ type: 'setStageHeadersHidden', hidden }),
 
       /* stages */
       insertStage: (index, name) => mutate({ type: 'insertStage', index, name }),

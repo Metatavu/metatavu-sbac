@@ -102,6 +102,8 @@ export function App({ initialDoc, folder, initialPath, fs, renderImageSlot }) {
         zoom={ui.zoom}
         onOpenFile={workspace.open}
         onNewBlueprint={() => setDialog('new')}
+        onRenameFile={workspace.rename}
+        onRenameService={actions.renameService}
         onSave={save}
         onModeChange={actions.setMode}
         onZoomIn={() => actions.setZoom(ui.zoom + 0.1)}

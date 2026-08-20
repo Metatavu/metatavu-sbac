@@ -47,6 +47,9 @@ export function documentReducer(doc, action) {
     case 'renameService':
       return { ...doc, service: { ...doc.service, name: action.name } };
 
+    case 'setStageHeadersHidden':
+      return { ...doc, stageHeadersHidden: action.hidden };
+
     /* ------------------------------------------------------------------ stages */
 
     case 'insertStage': {

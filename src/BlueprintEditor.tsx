@@ -11,7 +11,7 @@ import { NewBlueprintDialog } from './reference/components/dialogs/NewBlueprintD
 import { color } from './reference/theme.js'
 import { assetUrl, useAssets } from './useAssets.ts'
 
-type Filesystem = { list(): Promise<string[]>; read(path: string): Promise<string>; write(path: string, text: string): Promise<void>; exists(path: string): Promise<boolean> }
+type Filesystem = { list(): Promise<string[]>; read(path: string): Promise<string>; write(path: string, text: string): Promise<void>; rename(from: string, to: string): Promise<string>; exists(path: string): Promise<boolean> }
 type BlueprintEditorProps = { initialDoc: Parameters<typeof useBlueprint>[0]; folder: string; fs: Filesystem }
 
 export function BlueprintEditor({ initialDoc, folder, fs }: BlueprintEditorProps) {
@@ -66,7 +66,7 @@ export function BlueprintEditor({ initialDoc, folder, fs }: BlueprintEditorProps
     : undefined
 
   return <div style={{ height: '100vh', display: 'flex', flexDirection: 'column', background: color.canvas, color: color.ink, fontSize: 13, overflow: 'hidden' }}>
-    <TopBar serviceName={doc.service.name} folder={folder} currentPath={currentPath} files={files} dirty={ui.dirty} mode={ui.mode} zoom={ui.zoom} onOpenFile={workspace.open} onNewBlueprint={() => setDialog('new')} onSave={() => void save()} onModeChange={actions.setMode} onZoomIn={() => actions.setZoom(ui.zoom + 0.1)} onZoomOut={() => actions.setZoom(ui.zoom - 0.1)} onZoomReset={() => actions.setZoom(1)} onImport={() => setDialog('import')} onExport={() => setDialog('export')} />
+    <TopBar serviceName={doc.service.name} folder={folder} currentPath={currentPath} files={files} dirty={ui.dirty} mode={ui.mode} zoom={ui.zoom} onOpenFile={workspace.open} onNewBlueprint={() => setDialog('new')} onRenameFile={workspace.rename} onRenameService={actions.renameService} onSave={() => void save()} onModeChange={actions.setMode} onZoomIn={() => actions.setZoom(ui.zoom + 0.1)} onZoomOut={() => actions.setZoom(ui.zoom - 0.1)} onZoomReset={() => actions.setZoom(1)} onImport={() => setDialog('import')} onExport={() => setDialog('export')} />
     <div style={{ flex: 1, display: 'flex', minHeight: 0 }}><Sidebar doc={doc} ui={ui} actions={actions} derived={derived} /><Canvas doc={doc} ui={ui} actions={actions} derived={derived} renderImageSlot={renderImageSlot} /><PropertiesPanel doc={doc} ui={ui} actions={actions} derived={derived} assetFiles={assets.files as never[]} onUploadAsset={assets.upload} assetUrl={assetUrl} /></div>
     {ui.connectFrom && <ConnectBanner label={derived.elementsById.get(ui.connectFrom)?.label || ui.connectFrom} onCancel={actions.cancelConnect} />}
     {dialog === 'export' && <ExportDialog doc={doc} yaml={derived.yaml} json={derived.json} basename={basename} imageSources={imageSources} onClose={() => setDialog(null)} />}

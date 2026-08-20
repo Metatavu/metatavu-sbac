@@ -58,7 +58,8 @@ export function exportPdf(doc, options, basename) {
   const landscape = width >= height;
   const win = window.open('', '_blank');
   if (!win) throw new Error('Allow pop-ups to print to PDF.');
-  const css = `@page{size:${landscape ? 'A3 landscape' : 'A3 portrait'};margin:10mm}html,body{margin:0;padding:0}svg{width:100%;height:auto;display:block}`;
+  const pageSize = landscape ? '400mm 277mm' : '277mm 400mm';
+  const css = `@page{size:${landscape ? 'A3 landscape' : 'A3 portrait'};margin:10mm}html,body{margin:0;padding:0;width:${pageSize.split(' ')[0]};height:${pageSize.split(' ')[1]};overflow:hidden}svg{width:100%;height:100%;display:block}`;
   win.document.open();
   win.document.write(
     `<!doctype html><html><head><title>${basename}</title><style>${css}</style></head><body>${svg}</body></html>`

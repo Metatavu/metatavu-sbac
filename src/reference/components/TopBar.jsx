@@ -17,6 +17,8 @@ export function TopBar({
   zoom,
   onOpenFile,
   onNewBlueprint,
+  onRenameFile,
+  onRenameService,
   onSave,
   onModeChange,
   onZoomIn,
@@ -26,6 +28,13 @@ export function TopBar({
   onExport,
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [renamingService, setRenamingService] = useState(false);
+
+  const finishRename = (value) => {
+    const name = value.trim();
+    if (name) onRenameService(name);
+    setRenamingService(false);
+  };
 
   return (
     <header
@@ -59,29 +68,43 @@ export function TopBar({
           sb
         </div>
 
-        <button
-          type="button"
-          onClick={() => setMenuOpen((open) => !open)}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            border: '1px solid transparent',
-            borderRadius: radius.lg,
-            background: 'transparent',
-            cursor: 'pointer',
-            padding: '4px 8px',
-            textAlign: 'left',
-          }}
-        >
-          <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15, alignItems: 'flex-start' }}>
-            <div style={{ fontWeight: 600, fontSize: 13, letterSpacing: '-0.01em' }}>{serviceName}</div>
-            <Mono style={{ fontSize: 10, color: '#7B8794' }}>
-              {currentPath} {dirty ? '●' : ''}
-            </Mono>
-          </div>
-          <div style={{ color: color.label, fontSize: 9 }}>▾</div>
-        </button>
+        {renamingService ? (
+          <input
+            autoFocus
+            defaultValue={serviceName}
+            aria-label="Blueprint title"
+            onBlur={(event) => finishRename(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.currentTarget.blur();
+              if (event.key === 'Escape') setRenamingService(false);
+            }}
+            style={{ ...control.input, width: 220, height: 30, fontWeight: 600 }}
+          />
+        ) : (
+          <button
+            type="button"
+            onClick={() => setMenuOpen((open) => !open)}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              border: '1px solid transparent',
+              borderRadius: radius.lg,
+              background: 'transparent',
+              cursor: 'pointer',
+              padding: '4px 8px',
+              textAlign: 'left',
+            }}
+          >
+            <div style={{ display: 'flex', flexDirection: 'column', lineHeight: 1.15, alignItems: 'flex-start' }}>
+              <div style={{ fontWeight: 600, fontSize: 13, letterSpacing: '-0.01em' }}>{serviceName}</div>
+              <Mono style={{ fontSize: 10, color: '#7B8794' }}>
+                {currentPath} {dirty ? '●' : ''}
+              </Mono>
+            </div>
+            <div style={{ color: color.label, fontSize: 9 }}>▾</div>
+          </button>
+        )}
 
         <button
           type="button"
@@ -112,6 +135,15 @@ export function TopBar({
             onNewBlueprint={() => {
               setMenuOpen(false);
               onNewBlueprint();
+            }}
+            onRenameService={() => {
+              setMenuOpen(false);
+              setRenamingService(true);
+            }}
+            onRenameFile={async (name) => {
+              const path = await onRenameFile(currentPath, name);
+              setMenuOpen(false);
+              return path;
             }}
           />
         )}
@@ -190,7 +222,20 @@ function ZoomButton({ onClick, children }) {
   );
 }
 
-function FileMenu({ folder, files, currentPath, dirty, onOpenFile, onNewBlueprint }) {
+function FileMenu({ folder, files, currentPath, dirty, onOpenFile, onNewBlueprint, onRenameService, onRenameFile }) {
+  const [renamingFile, setRenamingFile] = useState(false);
+  const [fileName, setFileName] = useState(currentPath.split('/').pop());
+  const [renameError, setRenameError] = useState('');
+
+  const renameFile = async () => {
+    try {
+      await onRenameFile(fileName);
+      setRenameError('');
+    } catch (cause) {
+      setRenameError(cause instanceof Error ? cause.message : 'Unable to rename blueprint.');
+    }
+  };
+
   return (
     <div
       style={{
@@ -279,6 +324,55 @@ function FileMenu({ folder, files, currentPath, dirty, onOpenFile, onNewBlueprin
       })}
 
       <div style={{ height: 1, background: color.borderSoft, margin: '4px 2px' }} />
+      <button
+        type="button"
+        onClick={onRenameService}
+        style={{
+          textAlign: 'left',
+          border: 0,
+          background: 'transparent',
+          cursor: 'pointer',
+          padding: '7px 9px 7px 27px',
+          borderRadius: radius.md,
+          fontSize: 12,
+          color: color.inkSoft,
+        }}
+      >
+        Rename blueprint…
+      </button>
+      {renamingFile ? (
+        <div style={{ padding: '5px 9px 3px' }}>
+          <input
+            autoFocus
+            value={fileName}
+            aria-label="Blueprint file name"
+            onChange={(event) => setFileName(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') void renameFile();
+              if (event.key === 'Escape') setRenamingFile(false);
+            }}
+            style={{ ...control.input, height: 28, fontSize: 11.5 }}
+          />
+          {renameError && <div style={{ marginTop: 4, fontSize: 10.5, color: color.danger }}>{renameError}</div>}
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={() => setRenamingFile(true)}
+          style={{
+            textAlign: 'left',
+            border: 0,
+            background: 'transparent',
+            cursor: 'pointer',
+            padding: '7px 9px 7px 27px',
+            borderRadius: radius.md,
+            fontSize: 12,
+            color: color.inkSoft,
+          }}
+        >
+          Rename file…
+        </button>
+      )}
       <button
         type="button"
         onClick={onNewBlueprint}

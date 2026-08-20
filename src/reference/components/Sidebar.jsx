@@ -3,7 +3,7 @@
  */
 
 import React from 'react';
-import { EMOTIONS, MARKERS } from '../model/constants.js';
+import { EMOTIONS, LINES, MARKERS } from '../model/constants.js';
 import { chip, color, control, font, radius, size, tintFor } from '../theme.js';
 import { ChipRow, IconButton, SectionLabel } from './primitives.jsx';
 
@@ -26,14 +26,28 @@ export function Sidebar({ doc, ui, actions, derived }) {
       }}
     >
       <section style={{ padding: '14px 14px 10px' }}>
-        <SectionLabel>Lanes</SectionLabel>
+        <SectionLabel
+          action={
+            <button
+              type="button"
+              onClick={() => actions.setStageHeadersHidden(!doc.stageHeadersHidden)}
+              style={control.quiet}
+            >
+              {doc.stageHeadersHidden ? 'show headers' : 'hide headers'}
+            </button>
+          }
+        >
+          Lanes
+        </SectionLabel>
 
-        {doc.lanes.map((lane) => (
+        {doc.lanes.map((lane, index) => (
           <LaneRow
             key={lane.id}
             lane={lane}
+            hasNextLane={index < doc.lanes.length - 1}
             renaming={ui.renaming?.kind === 'lane' && ui.renaming.id === lane.id}
             onRename={(label) => actions.updateLane(lane.id, { label })}
+            onDividerChange={(dividerAfter) => actions.updateLane(lane.id, { dividerAfter })}
             onStartRename={() => actions.startRename('lane', lane.id)}
             onEndRename={actions.endRename}
             onToggleHidden={() => actions.setHidden('lane', lane.id, !lane.hidden)}
@@ -198,8 +212,10 @@ function FilterGroup({ label, children, last }) {
 
 function LaneRow({
   lane,
+  hasNextLane,
   renaming,
   onRename,
+  onDividerChange,
   onStartRename,
   onEndRename,
   onToggleHidden,
@@ -212,78 +228,94 @@ function LaneRow({
     <div
       style={{
         display: 'flex',
-        alignItems: 'center',
+        flexDirection: 'column',
+        alignItems: 'stretch',
         gap: 7,
         padding: '3px 2px',
         borderRadius: 5,
         opacity: lane.hidden ? 0.5 : 1,
       }}
     >
-      <div
-        style={{
-          width: 9,
-          height: 9,
-          flex: 'none',
-          borderRadius: 2,
-          background: tint.fill,
-          border: `1px solid ${tint.border}`,
-        }}
-      />
-
-      {renaming ? (
-        <input
-          autoFocus
-          defaultValue={lane.label}
-          onBlur={(event) => {
-            const value = event.target.value.trim();
-            if (value) onRename(value);
-            onEndRename();
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') event.currentTarget.blur();
-            if (event.key === 'Escape') onEndRename();
-          }}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
+        <div
           style={{
-            flex: 1,
-            minWidth: 0,
-            height: 22,
-            border: `1px solid ${color.accent}`,
-            borderRadius: radius.sm,
-            padding: '0 5px',
-            fontSize: 12,
-            outline: 'none',
+            width: 9,
+            height: 9,
+            flex: 'none',
+            borderRadius: 2,
+            background: tint.fill,
+            border: `1px solid ${tint.border}`,
           }}
         />
-      ) : (
-        <div
-          onClick={onStartRename}
-          style={{
-            flex: 1,
-            minWidth: 0,
-            overflow: 'hidden',
-            textOverflow: 'ellipsis',
-            whiteSpace: 'nowrap',
-            cursor: 'text',
-            fontSize: 12,
-          }}
-        >
-          {lane.label}
-          {lane.sublabel ? ` · ${lane.sublabel}` : ''}
-        </div>
-      )}
 
-      <div style={{ display: 'flex', gap: 1, opacity: 0.55 }}>
-        <IconButton
-          title="Show / hide lane"
-          onClick={onToggleHidden}
-          tone={lane.hidden ? color.amber : color.label}
-        >
-          {lane.hidden ? '◌' : '◉'}
-        </IconButton>
-        <IconButton title="Move up" onClick={onMoveUp}>↑</IconButton>
-        <IconButton title="Move down" onClick={onMoveDown}>↓</IconButton>
-        <IconButton title="Delete lane" onClick={onDelete} tone={color.danger}>✕</IconButton>
+        {renaming ? (
+          <input
+            autoFocus
+            defaultValue={lane.label}
+            onBlur={(event) => {
+              const value = event.target.value.trim();
+              if (value) onRename(value);
+              onEndRename();
+            }}
+            onKeyDown={(event) => {
+              if (event.key === 'Enter') event.currentTarget.blur();
+              if (event.key === 'Escape') onEndRename();
+            }}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              height: 22,
+              border: `1px solid ${color.accent}`,
+              borderRadius: radius.sm,
+              padding: '0 5px',
+              fontSize: 12,
+              outline: 'none',
+            }}
+          />
+        ) : (
+          <div
+            onClick={onStartRename}
+            style={{
+              flex: 1,
+              minWidth: 0,
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              cursor: 'text',
+              fontSize: 12,
+            }}
+          >
+            {lane.label}
+            {lane.sublabel ? ` · ${lane.sublabel}` : ''}
+          </div>
+        )}
+
+        <div style={{ display: 'flex', gap: 1, opacity: 0.55 }}>
+          <IconButton
+            title="Show / hide lane"
+            onClick={onToggleHidden}
+            tone={lane.hidden ? color.amber : color.label}
+          >
+            {lane.hidden ? '◌' : '◉'}
+          </IconButton>
+          <IconButton title="Move up" onClick={onMoveUp}>↑</IconButton>
+          <IconButton title="Move down" onClick={onMoveDown}>↓</IconButton>
+          <IconButton title="Delete lane" onClick={onDelete} tone={color.danger}>✕</IconButton>
+        </div>
       </div>
+      {hasNextLane && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 16, fontSize: 10.5, color: color.fainter }}>
+          Line below
+          <select
+            value={lane.dividerAfter || ''}
+            onChange={(event) => onDividerChange(event.target.value)}
+            style={{ ...control.select, flex: 1, height: 24, fontSize: 10.5 }}
+          >
+            <option value="">None</option>
+            {Object.values(LINES).map((line) => <option key={line} value={line}>{line}</option>)}
+          </select>
+        </label>
+      )}
     </div>
   );
 }

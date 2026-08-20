@@ -23,6 +23,10 @@ describe('workspace API', () => {
     expect(await readFile(path.join(folder, 'checkout.yaml'), 'utf8')).toContain('Revised')
     expect((await app.inject({ method: 'PUT', url: '/api/files/new-blueprint.yaml', payload: { text: 'service:\n  name: New blueprint\n' } })).statusCode).toBe(204)
     expect(await readFile(path.join(folder, 'new-blueprint.yaml'), 'utf8')).toContain('New blueprint')
+    const renamed = await app.inject({ method: 'POST', url: '/api/files/rename', payload: { from: 'new-blueprint.yaml', to: 'renamed-blueprint.yaml' } })
+    expect(renamed.statusCode).toBe(200)
+    expect(renamed.json()).toEqual({ path: 'renamed-blueprint.yaml' })
+    expect(await readFile(path.join(folder, 'renamed-blueprint.yaml'), 'utf8')).toContain('New blueprint')
   })
 
   it('rejects traversal outside the workspace', async () => {

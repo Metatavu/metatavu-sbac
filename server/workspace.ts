@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, realpath, stat, writeFile } from 'node:fs/promises'
+import { mkdir, readdir, readFile, realpath, rename, stat, writeFile } from 'node:fs/promises'
 import path from 'node:path'
 import { parseDocument } from 'yaml'
 
@@ -93,6 +93,20 @@ export class Workspace {
       this.assertInside(await realpath(path.dirname(newPath)))
       await writeFile(newPath, text, 'utf8')
     }
+  }
+
+  async rename(fromPath: string, toPath: string): Promise<string> {
+    const source = await this.resolveExisting(fromPath)
+    const target = this.resolve(toPath)
+    this.assertInside(await realpath(path.dirname(target)))
+    try {
+      await stat(target)
+      throw new Error(`A blueprint already exists at ${toPath}.`)
+    } catch (error) {
+      if (error instanceof Error && !('code' in error && error.code === 'ENOENT')) throw error
+    }
+    await rename(source, target)
+    return path.relative(this.folder, target)
   }
 
   async listAssets(): Promise<string[]> {

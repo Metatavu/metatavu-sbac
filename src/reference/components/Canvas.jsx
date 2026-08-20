@@ -108,40 +108,41 @@ export function Canvas({ doc, ui, actions, derived, renderImageSlot }) {
             boxShadow: '0 1px 3px rgba(22,32,42,0.06)',
           }}
         >
-          {/* stage headers */}
-          <div style={{ display: 'flex', alignItems: 'stretch' }}>
-            <div style={{ width: size.laneLabel, flex: 'none' }} />
-            {stages.map((stage, column) => (
-              <StageHeader
-                key={stage.id}
-                stage={stage}
-                index={doc.stages.indexOf(stage)}
-                selected={ui.selection?.kind === 'stage' && ui.selection.id === stage.id}
-                renaming={ui.renaming?.kind === 'stage' && ui.renaming.id === stage.id}
-                actions={actions}
-                canMoveLeft={column > 0}
-                canMoveRight={column < stages.length - 1}
-              />
-            ))}
-            <div style={{ width: size.stageGutter, flex: 'none', padding: '8px 0 0 8px' }}>
-              <button
-                type="button"
-                onClick={() => actions.insertStage(doc.stages.length)}
-                style={{
-                  width: 76,
-                  height: 30,
-                  border: '1px dashed #C9D0CA',
-                  borderRadius: radius.lg,
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  color: color.muted,
-                  fontSize: 11,
-                }}
-              >
-                + Stage
-              </button>
+          {!doc.stageHeadersHidden && (
+            <div style={{ display: 'flex', alignItems: 'stretch' }}>
+              <div style={{ width: size.laneLabel, flex: 'none' }} />
+              {stages.map((stage, column) => (
+                <StageHeader
+                  key={stage.id}
+                  stage={stage}
+                  index={doc.stages.indexOf(stage)}
+                  selected={ui.selection?.kind === 'stage' && ui.selection.id === stage.id}
+                  renaming={ui.renaming?.kind === 'stage' && ui.renaming.id === stage.id}
+                  actions={actions}
+                  canMoveLeft={column > 0}
+                  canMoveRight={column < stages.length - 1}
+                />
+              ))}
+              <div style={{ width: size.stageGutter, flex: 'none', padding: '8px 0 0 8px' }}>
+                <button
+                  type="button"
+                  onClick={() => actions.insertStage(doc.stages.length)}
+                  style={{
+                    width: 76,
+                    height: 30,
+                    border: '1px dashed #C9D0CA',
+                    borderRadius: radius.lg,
+                    background: 'transparent',
+                    cursor: 'pointer',
+                    color: color.muted,
+                    fontSize: 11,
+                  }}
+                >
+                  + Stage
+                </button>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* lane rows, each optionally followed by a blueprint line */}
           {lanes.map((lane) => (
@@ -413,20 +414,30 @@ function LaneRow({
 /** Workshop-speed capture: type, Enter, type again. Escape closes. */
 function QuickAdd({ onCommit, onClose }) {
   const [text, setText] = useState('');
+  const commit = (value) => {
+    const label = value.trim();
+    if (label) onCommit(label);
+  };
   return (
     <input
       autoFocus
       value={text}
       placeholder="Label, then Enter"
       onChange={(event) => setText(event.target.value)}
-      onBlur={onClose}
+      onBlur={(event) => {
+        commit(event.currentTarget.value);
+        onClose();
+      }}
       onKeyDown={(event) => {
         if (event.key === 'Enter') {
-          const value = text.trim();
-          if (value) onCommit(value);
+          event.preventDefault();
+          commit(event.currentTarget.value);
           setText('');
         }
-        if (event.key === 'Escape') onClose();
+        if (event.key === 'Escape') {
+          setText('');
+          onClose();
+        }
       }}
       style={{
         width: '100%',

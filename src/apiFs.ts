@@ -31,6 +31,15 @@ export function createApiFs() {
       })
       if (!response.ok) throw new Error(await message(response))
     },
+    async rename(from: string, to: string): Promise<string> {
+      const response = await fetch('/api/files/rename', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ from, to }),
+      })
+      if (!response.ok) throw new Error(await message(response))
+      return ((await response.json()) as { path: string }).path
+    },
     async exists(path: string): Promise<boolean> {
       return (await list()).includes(path)
     },

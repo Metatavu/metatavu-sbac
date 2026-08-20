@@ -20,6 +20,8 @@
  * @property {string} [description]
  * @property {{min:number,max:number,unit:string}|null} [duration]
  * @property {boolean} [hidden]
+ * @property {boolean} [titleHidden]
+ * @property {boolean} [durationHidden]
  *
  * @typedef {Object} BlueprintElement
  * @property {string} id
@@ -48,6 +50,7 @@
  *
  * @typedef {Object} BlueprintDocument
  * @property {{id:string,name:string}} service
+ * @property {boolean} [stageHeadersHidden]
  * @property {Lane[]} lanes
  * @property {Stage[]} stages
  * @property {BlueprintElement[]} elements
@@ -63,7 +66,7 @@ const ORDER_STEP = 10;
 
 /** Normalized document -> file shape (what `serializeYaml` writes). */
 export function toFile(doc) {
-  return {
+  const out = {
     version: FORMAT_VERSION,
     service: doc.service,
     lanes: doc.lanes.map((lane) => {
@@ -77,7 +80,12 @@ export function toFile(doc) {
       const out = { id: stage.id, name: stage.name };
       if (stage.description) out.description = stage.description;
       if (stage.duration) out.duration = stage.duration;
-      if (stage.hidden) out.view = { hidden: true };
+      if (stage.hidden || stage.titleHidden || stage.durationHidden) {
+        out.view = {};
+        if (stage.hidden) out.view.hidden = true;
+        if (stage.titleHidden) out.view.title_hidden = true;
+        if (stage.durationHidden) out.view.duration_hidden = true;
+      }
       return out;
     }),
     actors: doc.actors,
@@ -112,12 +120,15 @@ export function toFile(doc) {
       return out;
     }),
   };
+  if (doc.stageHeadersHidden) out.view = { stage_headers_hidden: true };
+  return out;
 }
 
 /** File shape -> normalized document. Tolerates the older `items:` key. */
 export function fromFile(file) {
   return {
     service: file.service || { id: 'blueprint', name: 'Blueprint' },
+    stageHeadersHidden: Boolean(file.view && file.view.stage_headers_hidden),
     lanes: (file.lanes || []).map((lane) => ({
       id: lane.id,
       kind: lane.kind || 'custom',
@@ -132,6 +143,8 @@ export function fromFile(file) {
       description: stage.description || '',
       duration: stage.duration || null,
       hidden: Boolean(stage.view && stage.view.hidden),
+      titleHidden: Boolean(stage.view && stage.view.title_hidden),
+      durationHidden: Boolean(stage.view && stage.view.duration_hidden),
     })),
     elements: (file.elements || file.items || []).map((element) => ({
       id: element.id,

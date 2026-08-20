@@ -4,7 +4,7 @@ import { documentFromFile, toFile } from './reference/model/document.js'
 import { blankDocument } from './reference/model/samples.js'
 import { slugify } from './reference/model/ids.js'
 
-type Filesystem = { list(): Promise<string[]>; read(path: string): Promise<string>; write(path: string, text: string): Promise<void>; exists(path: string): Promise<boolean> }
+type Filesystem = { list(): Promise<string[]>; read(path: string): Promise<string>; write(path: string, text: string): Promise<void>; rename(from: string, to: string): Promise<string>; exists(path: string): Promise<boolean> }
 
 export function useWorkspace({ fs, folder, onOpen }: { fs: Filesystem; folder: string; onOpen(document: Parameters<typeof documentFromFile>[0], path: string): void }) {
   const [files, setFiles] = useState<string[]>([])
@@ -47,5 +47,19 @@ export function useWorkspace({ fs, folder, onOpen }: { fs: Filesystem; folder: s
     return path
   }, [folder, fs, onOpen, refresh])
 
-  return { folder, files, currentPath, error, open, save, create, refresh }
+  const rename = useCallback(async (path: string, name: string) => {
+    const trimmed = name.trim()
+    if (!trimmed) throw new Error('Give the file a name.')
+    const filename = /\.ya?ml$/i.test(trimmed) ? trimmed : `${trimmed}.yaml`
+    if (filename.includes('/') || filename.includes('\\')) throw new Error('Enter a file name, not a path.')
+    const parent = path.includes('/') ? path.slice(0, path.lastIndexOf('/') + 1) : ''
+    const nextPath = `${parent}${filename}`
+    if (nextPath === path) return path
+    const renamedPath = await fs.rename(path, nextPath)
+    await refresh()
+    setCurrentPath(renamedPath)
+    return renamedPath
+  }, [fs, refresh])
+
+  return { folder, files, currentPath, error, open, save, create, rename, refresh }
 }

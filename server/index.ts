@@ -10,7 +10,7 @@ export async function buildServer(options: { folder: string; staticRoot?: string
 
   app.setErrorHandler((error, _request, reply) => {
     const message = error instanceof Error ? error.message : 'Unexpected server error.'
-    if (message.includes('Blueprint path') || message.includes('Only .yaml') || message.includes('Only image') || message.includes('Image files') || message.includes('Upload a supported') || message.includes('Invalid YAML')) {
+    if (message.includes('Blueprint path') || message.includes('Only .yaml') || message.includes('Only image') || message.includes('Image files') || message.includes('Upload a supported') || message.includes('Invalid YAML') || message.includes('A relative blueprint') || message.includes('A blueprint already exists')) {
       return reply.code(400).send({ error: message })
     }
     return reply.send(error)
@@ -37,6 +37,12 @@ export async function buildServer(options: { folder: string; staticRoot?: string
     if (typeof request.body?.text !== 'string') return reply.code(400).send({ error: 'The request body needs a text string.' })
     await workspace.write(request.params.path, request.body.text)
     return reply.code(204).send()
+  })
+  app.post<{ Body: { from?: unknown; to?: unknown } }>('/api/files/rename', async (request, reply) => {
+    if (typeof request.body?.from !== 'string' || typeof request.body?.to !== 'string') {
+      return reply.code(400).send({ error: 'Both source and destination blueprint paths are required.' })
+    }
+    return reply.send({ path: await workspace.rename(request.body.from, request.body.to) })
   })
 
   if (options.staticRoot && existsSync(options.staticRoot)) {
