@@ -47,6 +47,7 @@ export function Sidebar({ doc, ui, actions, derived }) {
             hasNextLane={index < doc.lanes.length - 1}
             renaming={ui.renaming?.kind === 'lane' && ui.renaming.id === lane.id}
             onRename={(label) => actions.updateLane(lane.id, { label })}
+            onSublabelChange={(sublabel) => actions.updateLane(lane.id, { sublabel })}
             onDividerChange={(dividerAfter) => actions.updateLane(lane.id, { dividerAfter })}
             onStartRename={() => actions.startRename('lane', lane.id)}
             onEndRename={actions.endRename}
@@ -210,11 +211,23 @@ function FilterGroup({ label, children, last }) {
   );
 }
 
+const laneFieldStyle = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 6,
+  paddingLeft: 16,
+  fontSize: 10.5,
+  color: color.fainter,
+};
+
+const laneFieldLabelStyle = { width: 56, flex: 'none' };
+
 function LaneRow({
   lane,
   hasNextLane,
   renaming,
   onRename,
+  onSublabelChange,
   onDividerChange,
   onStartRename,
   onEndRename,
@@ -286,7 +299,6 @@ function LaneRow({
             }}
           >
             {lane.label}
-            {lane.sublabel ? ` · ${lane.sublabel}` : ''}
           </div>
         )}
 
@@ -303,9 +315,33 @@ function LaneRow({
           <IconButton title="Delete lane" onClick={onDelete} tone={color.danger}>✕</IconButton>
         </div>
       </div>
+      <label style={laneFieldStyle}>
+        <span style={laneFieldLabelStyle}>Subtitle</span>
+        <input
+          key={lane.sublabel || ''}
+          defaultValue={lane.sublabel || ''}
+          placeholder="None"
+          onBlur={(event) => {
+            const value = event.target.value.trim();
+            if (value !== (lane.sublabel || '')) onSublabelChange(value);
+            else event.target.value = value;
+          }}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter') event.currentTarget.blur();
+            if (event.key === 'Escape') {
+              event.currentTarget.value = lane.sublabel || '';
+              event.currentTarget.blur();
+            }
+          }}
+          style={{ ...control.input, flex: 1, minWidth: 0, height: 24, fontSize: 10.5, padding: '0 6px' }}
+        />
+        {lane.sublabel && (
+          <IconButton title="Remove subtitle" onClick={() => onSublabelChange('')}>✕</IconButton>
+        )}
+      </label>
       {hasNextLane && (
-        <label style={{ display: 'flex', alignItems: 'center', gap: 6, paddingLeft: 16, fontSize: 10.5, color: color.fainter }}>
-          Line below
+        <label style={laneFieldStyle}>
+          <span style={laneFieldLabelStyle}>Line below</span>
           <select
             value={lane.dividerAfter || ''}
             onChange={(event) => onDividerChange(event.target.value)}
